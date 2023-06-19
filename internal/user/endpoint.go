@@ -24,6 +24,13 @@ type (
 		Phone     string `json:"phone"`
 	}
 
+	UpdateReq struct {
+		FirstName *string `json:"first_name"`
+		LastName  *string `json:"last_name"`
+		Email     *string `json:"email"`
+		Phone     *string `json:"phone"`
+	}
+
 	ErrorRes struct {
 		Error string `json:"error"`
 	}
@@ -100,6 +107,32 @@ func makeGetAllEndpoint(s Service) Controller {
 func makeUpdateEndpoint(s Service) Controller {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("update User")
+		var req UpdateReq
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			w.WriteHeader(400)
+			json.NewEncoder(w).Encode(ErrorRes{"intalid request format"})
+		}
+		if req.FirstName != nil && *req.FirstName == "" {
+			w.WriteHeader(400)
+			json.NewEncoder(w).Encode(ErrorRes{"First Name is required"})
+			return
+		}
+
+		if req.LastName != nil && *req.LastName == "" {
+			w.WriteHeader(400)
+			json.NewEncoder(w).Encode(ErrorRes{"Last Name is required"})
+			return
+		}
+
+		path := mux.Vars(r)
+		id := path["id"]
+
+		if err := s.Update(id, req.FirstName, req.LastName, req.Email, req.Phone); err != nil {
+			w.WriteHeader(404)
+			json.NewEncoder(w).Encode(ErrorRes{"user doesn't exist"})
+			return
+		}
+
 		json.NewEncoder(w).Encode(map[string]bool{"ok": true})
 	}
 }
